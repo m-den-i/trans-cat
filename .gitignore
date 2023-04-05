@@ -3,4 +3,5 @@ web/download/*.csv
 docker-compose.override.yml
 .vscode
 .env
+.venv/*
 __pycache__
