@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.11
 RUN apt-get -y update
 RUN apt-get install -y pip build-essential
 COPY requirements.txt requirements.txt

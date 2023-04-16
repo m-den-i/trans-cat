@@ -14,12 +14,9 @@ from sklearn.datasets import load_breast_cancer, load_diabetes, load_wine
 from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
 from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
 from sklearn.model_selection import cross_val_score
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
+from settings import UPLOAD_FOLDER, DOWNLOAD_FOLDER
 from pathlib import Path
 from dotenv import load_dotenv
-from jinja2 import Template
-from io import StringIO
 from flask import Flask, redirect, render_template, request, send_file, send_from_directory
 from lib import transcat
 
@@ -35,13 +32,13 @@ app.config["DEBUG"] = True
 load_dotenv(Path.joinpath(Path.cwd(), ".env"))
 
 
-if os.environ.get("UPLOAD_FOLDER"):
-    UPLOAD_FOLDER =  Path.joinpath(Path.cwd(), os.environ.get("UPLOAD_FOLDER")) 
+if UPLOAD_FOLDER:
+    UPLOAD_FOLDER =  Path.joinpath(Path.cwd(), UPLOAD_FOLDER) 
 else:
     UPLOAD_FOLDER =  '/code/files'
 
-if os.environ.get("DOWNLOAD_FOLDER"):
-    DOWNLOAD_FOLDER =  Path.joinpath(Path.cwd(), os.environ.get("DOWNLOAD_FOLDER")) 
+if DOWNLOAD_FOLDER:
+    DOWNLOAD_FOLDER =  Path.joinpath(Path.cwd(), DOWNLOAD_FOLDER) 
 else:
     DOWNLOAD_FOLDER =  '/code/download'
 

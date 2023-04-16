@@ -5,3 +5,7 @@ docker-compose.override.yml
 .env
 .venv/*
 __pycache__
+.coverage
+.pytest_cache
+cov.xml
+.idea*
