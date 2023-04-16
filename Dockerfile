@@ -1,13 +1,11 @@
-FROM python:3.8
-RUN apt-get -y update
-RUN apt-get install -y pip build-essential
+FROM python:3.10-slim
+
 COPY requirements.txt requirements.txt
 
 RUN pip3 install -r requirements.txt
 
-WORKDIR "/"
+WORKDIR "/app"
 
+COPY . .
 
-#ENTRYPOINT ["flask run --host=0.0.0.0"]
-#ENTRYPOINT ["python3"]
-CMD ["python3","-u","code/app.py"]
+CMD ["python3","-m","tg"]

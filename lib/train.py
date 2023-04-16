@@ -7,11 +7,11 @@ from sklearn.linear_model import LogisticRegression
 
 from lib.models import PredictionResult
 
-def train_model_predict(df_model: pd.DataFrame, df_pred: pd.DataFrame, feature_vec: list[str]) -> PredictionResult:
+def train_model_predict(df_model: pd.DataFrame, df_pred: pd.DataFrame, feature_vec: list[str], category_column: str = "Kategorie") -> PredictionResult:
     df_x = pd.DataFrame(df_model, columns=feature_vec).values.tolist()
     df_x = [ ' '.join(str(e) for e in st) for st in df_x ]
 
-    df_y = pd.DataFrame(df_model, columns=['Kategorie']).values.tolist()
+    df_y = pd.DataFrame(df_model, columns=[category_column]).values.tolist()
     df_y_flat = list(dict.fromkeys( [subitem for item in df_y for subitem in item] ))
 
     df_x_predict = pd.DataFrame(df_pred, columns=feature_vec).values.tolist()

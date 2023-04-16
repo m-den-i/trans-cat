@@ -1,3 +1,4 @@
+import abc
 import codecs
 
 import chardet
@@ -5,13 +6,22 @@ import pandas as pd
 
 from lib.storage.base import BaseTrainStorage, BaseUpdateStorage
 
-class CSVTrainStorage(BaseTrainStorage):
+
+class CSVBaseTrainStorage(BaseTrainStorage, abc.ABC):
+    def __init__(self, train_path) -> None:
+        self.train_path = train_path
+
+    def load_train_model(self):
+        return pd.read_csv(self.train_path, delimiter=',')
+
+
+class CSVTrainStorage(CSVBaseTrainStorage):
     BLOCKSIZE = 1048576
 
     def __init__(self, tmp_file_data_path: str, tmp_name: str, train_path_name: str, line_start: int, line_sep: str) -> None:
+        super().__init__(train_path_name)
         self.tmp_file_data_path = tmp_file_data_path
         self.tmp_name = tmp_name
-        self.train_path_name = train_path_name
         self.line_start = line_start
         self.line_sep = line_sep
 
