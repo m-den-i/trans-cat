@@ -27,7 +27,7 @@ def train_model_predict(df_model: pd.DataFrame, df_pred: pd.DataFrame, feature_v
     X_train = X_all[0:len(df_x)]
     X_predict = X_all[len(df_x):]
     Y = output_transformer.fit_transform(df_y)
-    clf = LogisticRegression(random_state=0)
+    clf = LogisticRegression(random_state=0, max_iter=5000)
     #clf = DecisionTreeClassifier(random_state=0)
     #clf = RandomForestClassifier(max_depth=2, random_state=0)
 
