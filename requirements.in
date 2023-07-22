@@ -14,3 +14,4 @@ psycopg[binary,pool]
 sqlalchemy
 aiozmq
 pydantic<2
+msgpack
