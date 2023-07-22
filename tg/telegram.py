@@ -169,7 +169,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Get user that sent /start and log his name
     user = update.message.from_user
     logger.info("User %s started the conversation.", user.first_name)
-    res = await context.bot_data["redis"].client.smembers("tg.financebot.members")
+    res = await context.bot_data["redis"].smembers("tg.financebot.members")
     if str(user.id).encode() not in res:
         raise Exception(f"Auth error: {user.id}")
     return START_ROUTES
