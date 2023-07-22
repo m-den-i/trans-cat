@@ -1,0 +1,16 @@
+flask
+numpy
+pandas==1.5.3
+chardet
+python-dotenv
+scipy
+scikit-learn
+redis[hiredis]
+python-telegram-bot[job-queue]==20.2
+asyncclick
+pytest-asyncio
+pytest
+psycopg[binary,pool]
+sqlalchemy
+aiozmq
+pydantic<2
