@@ -1,15 +1,15 @@
 from datetime import datetime
-import os
-import random as rand
+from typing import Sequence
 
 import pandas as pd
 import sqlalchemy as sa
 from lib.storage.base import BaseUpdateStorage, BaseTrainStorage
 from tg.constants import CATEGORY_COLUMN
 from tg.models import get_df_from_response
+from tg.redis import RedisMessage
 
 
-class _BaseLoader:
+class _BaseSQLLoader:
     def __init__(self, engine: sa.Engine, table: str) -> None:
         self.engine = engine
         self.table = table
@@ -22,11 +22,11 @@ class _BaseLoader:
         return df
 
 
-class CustomTrainStorage(_BaseLoader, BaseTrainStorage):
-    def __init__(self, msg, engine: sa.Engine, table: str) -> None:
-        assert len(msg)
+class SQLTrainStorage(_BaseSQLLoader, BaseTrainStorage):
+    def __init__(self, msgs: Sequence[RedisMessage], engine: sa.Engine, table: str) -> None:
+        assert len(msgs)
         super().__init__(engine, table)
-        self.df = get_df_from_response(msg)
+        self.df = get_df_from_response(msgs)
         self.train_model = self._load_train_model()
 
     def load_data_for_prediction(self) -> pd.DataFrame:
@@ -36,7 +36,7 @@ class CustomTrainStorage(_BaseLoader, BaseTrainStorage):
         return self.train_model
 
 
-class CustomUpdateStorage(BaseUpdateStorage):
+class SQLUpdateStorage(BaseUpdateStorage):
     def __init__(self, train_model: pd.DataFrame, predict_model: pd.DataFrame, engine: sa.Engine, table: str):
         self.predict_model = predict_model
         self.train_model = train_model
@@ -56,15 +56,18 @@ class CustomUpdateStorage(BaseUpdateStorage):
         with self.engine.connect() as connection:
             resp = tuple(connection.execute(sa.text(f"select id from {self.table} order by id desc limit 1;")))
             last_index = resp[0][0] if len(resp) else 0
-            df["operation_date"] = df["operation_date"].map(lambda x: datetime.strptime(x, "%d-%m-%Y"))
+            df["operation_date"] = df["operation_date"]
             df["id"] = df["id"].map(lambda x: int(x.split("-")[0]))
             df = df[df["id"] > last_index]
-            df.to_sql(self.table, connection, if_exists="append", index=False)
+            dtype = {
+                "operation_date": sa.DateTime,
+            }
+            df.to_sql(self.table, connection, if_exists="append", index=False, dtype=dtype)
             connection.commit()
         return self.train_model
 
 
-class CategoriesUpdateStorage(_BaseLoader, BaseUpdateStorage):
+class SQLCategoriesUpdateStorage(_BaseSQLLoader, BaseUpdateStorage):
     def __init__(self, index: str, engine: sa.Engine, table: str):
         self.index = index
         super().__init__(engine, table)

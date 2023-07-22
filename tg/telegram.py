@@ -33,14 +33,18 @@ import logging
 import os
 from typing import Sequence
 
+from httpx import get
+from server.app import get_service
+from settings import TG_BOT_KEY
+
 
 from tg import app
 from tg.constants import TRAIN_MODEL
-from tg.models import MessageResponse
-from tg.storage import CategoriesUpdateStorage, CustomTrainStorage
+from tg.models import MessageResponse, MessageResponseExisting
+from tg.storage import SQLCategoriesUpdateStorage, SQLTrainStorage
 from tg.utils import divide_chunks
 
-from .redis import RedisReader, RedisWriter, init_redis
+from .redis import RedisMessage, RedisReader, RedisWriter, init_redis
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 
@@ -69,43 +73,81 @@ START_ROUTES, FIXING, TYPING_CHOICE = range(3)
 # Callback data
 ONE, TWO, THREE, FOUR = range(4)
 
-async def load_redis_client(app: Application):
+
+async def _load_redis(app: Application):
+    logger.info("Loading Redis client")
     redis_client = await init_redis()
     redis = RedisReader(redis_client)
-    redis_writer = RedisWriter(redis_client)
     app.bot_data["redis"] = redis
-    app.bot_data["redis_writer"] = redis_writer
-    assert await app.bot_data["redis"].client.ping()
+    assert await app.bot_data["redis"].ping()
+    return redis
+
+async def _load_redis_bg_task(app: Application):
+    logger.info("Setting up Redis poll bg job")
     app.job_queue.run_repeating(poll_redis, interval=timedelta(seconds=5))
-    res = await redis.client.smembers("tg.financebot.members")
+
+async def _load_server(app: Application):
+    logger.info("Loading pyzmq server")
+    server = await get_service()
+    app.bot_data["server"] = server
+    return server
+
+async def load_app(app: Application):
+    redis = await _load_redis(app)
+    await _load_redis_bg_task(app)
+    await _load_server(app)
+
+    res = await redis.smembers("tg.financebot.members")
     for user_id in res:
         _user_id = user_id.decode()
         context = CallbackContext(app, _user_id, _user_id)
         await process_pending(context)
-    
 
-async def clear_redis(app: Application):
+
+async def _clear_redis(app: Application):
+    logger.info("Clearing Redis client.")
     redis = app.bot_data["redis"]
     await redis.close()
 
-async def assign_label_and_get_response(msgs: Sequence[tuple[bytes, bytes]], context: ContextTypes.DEFAULT_TYPE):
-    storage = CustomTrainStorage(msgs, app.engine, app.db_table) 
-    predict = await app.predict_and_save(storage, context.bot_data["redis_writer"])
-    return MessageResponse.from_result(predict, storage.df)
+
+async def _clear_server(app: Application):
+    logger.info("Clearing pyzmq server.")
+    server = app.bot_data["server"]
+    await server.wait_closed()
+
+
+async def clear_app(app: Application):
+    await _clear_redis(app)
+    await _clear_server(app)    
+
+
+async def assign_label_and_get_response(msgs: Sequence[RedisMessage]):
+    found, missing = await app.check_labels(msgs)
+    messages: list[MessageResponse] = []
+    if missing:
+        storage = SQLTrainStorage(missing, app.engine, app.db_table.name) 
+        predict = await app.predict_and_save(storage)
+        messages.append(MessageResponse.from_result(predict, storage.df))
+    if found:
+        messages.append(MessageResponseExisting.from_result(found))
+    return messages
+
 
 async def update_category_and_get_response(index: str, category: str, context: ContextTypes.DEFAULT_TYPE):
-    await app.update_category(index, category, context.bot_data["redis_writer"])
+    await app.update_category(index, category)
     predict, result = app.get_chosen_category(index)
     return MessageResponse.from_result(predict, result)
 
-async def process_msgs(context: ContextTypes.DEFAULT_TYPE, msgs: Sequence[tuple[bytes, bytes]]):
+
+async def process_msgs(context: ContextTypes.DEFAULT_TYPE, msgs: Sequence[RedisMessage]):
     redis: RedisReader = context.bot_data["redis"]
-    response_text = await assign_label_and_get_response(msgs, context)
-    res = await redis.client.smembers("tg.financebot.members")
-    for user_id in res:
-        await context.bot.send_message(user_id.decode(), **response_text.to_fix_category_response())
-    for index in response_text.indexes:
-        await redis.ack(index)
+    response_texts = await assign_label_and_get_response(msgs)
+    res = await redis.smembers("tg.financebot.members")
+    for response_text in response_texts:
+        for user_id in res:
+            await context.bot.send_message(user_id.decode(), **response_text.to_fix_category_response())
+        for index in response_text.indexes:
+            await redis.ack(index)
 
 
 async def process_pending(context: ContextTypes.DEFAULT_TYPE):
@@ -138,7 +180,7 @@ async def fixing(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     user = update.effective_user
     index = update.callback_query.data
-    loader = CategoriesUpdateStorage(index, app.engine, app.db_table)
+    loader = SQLCategoriesUpdateStorage(index, app.engine, app.db_table.name)
     df = loader.load_train_model()
     line = df.loc[df["id"] == index]
     description = line['description'].values[0]
@@ -158,8 +200,10 @@ async def fixing(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return FIXING
 
+
 async def to_fixing(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return FIXING
+
 
 async def set_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     category, index = update.callback_query.data.split("❆")
@@ -191,23 +235,18 @@ def main() -> None:
     application = (
         Application
         .builder()
-        .token(os.environ["TG_BOT_KEY"])
-        .post_stop(clear_redis)
-        .post_init(load_redis_client)
+        .token(TG_BOT_KEY)
+        .post_stop(clear_app)
+        .post_init(load_app)
         .build()
     )
 
 
     # Setup conversation handler with the states FIRST and SECOND
-
     # Use the pattern parameter to pass CallbackQueries with specific
-
     # data pattern to the corresponding handlers.
-
     # ^ means "start of line/string"
-
     # $ means "end of line/string"
-
     # So ^ABC$ will only allow 'ABC'
 
     conv_handler = ConversationHandler(
@@ -233,4 +272,3 @@ def main() -> None:
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling()
-    

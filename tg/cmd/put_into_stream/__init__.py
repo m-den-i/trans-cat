@@ -4,7 +4,7 @@ from tg.app import db_table, engine
 from tg.constants import CATEGORY_COLUMN
 from tg.models import LabelEvent
 from tg.redis import RedisWriter, RedisWriterConfig, init_redis
-from tg.storage import CategoriesUpdateStorage
+from tg.storage import SQLCategoriesUpdateStorage
 # You can use all of click's features as per its documentation.
 # Async commands are supported seamlessly; they just work.
 
@@ -14,7 +14,7 @@ from tg.storage import CategoriesUpdateStorage
 async def put_into_stream(stream, since_id):
     client = await init_redis()
     writer = RedisWriter(client, config=RedisWriterConfig(stream))
-    storage = CategoriesUpdateStorage(since_id, engine, db_table)
+    storage = SQLCategoriesUpdateStorage(since_id, engine, db_table.name)
     int_index, _ = map(int, since_id.split("-"))
     train_model = storage.load_train_model()
     try:
