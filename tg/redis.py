@@ -48,10 +48,15 @@ class TransferData(Value):
 
     @validator("settlement_date", pre=True)
     def parse_settlement_date(cls, value):
-        return datetime.strptime(
-            value,
-            "%d-%m-%Y"
-        )
+        if isinstance(value, datetime):
+            return value
+        elif isinstance(value, str):
+            return datetime.strptime(
+                value,
+                "%d-%m-%Y"
+            )
+        raise ValueError("Should be str or datetime.")
+
 
 
 class IncreaseData(Value):

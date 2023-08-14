@@ -139,8 +139,8 @@ async def test_msgs():
                 operation_date="20-03-2023",
                 source="62 1090 1447 0000 0001 4793 2084",
                 destination="62 1090 1447 0000 0001 4793 2085",
-                name="KRAJOWY INTEGRATOR PŁATNOŚCI SA",
-                title="TR-1ABC-8KAM123",
+                name="MOBILE-TRAFFIC-DATA SPÓŁKA Z OGRANICZONĄ ODPOWIEDZIALNOŚCIĄ",
+                title="-ID_TR=2449293- ELD:20423074, Zakupy mobilne moBILET",
                 settlement_date="20-03-2023",
                 saldo="100 PLN",
             )

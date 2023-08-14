@@ -1,28 +1,17 @@
 import aiozmq.rpc
-from pydantic import BaseModel
+from server.models import CheckCategoryRequest, CheckCategoryResponse, ResponseError
 from settings import SERVER_URL
 from tg.app import check_labels
-from tg.models import ExistingResponse
-from tg.redis import RedisMessage
 
 
-class CheckCategoryRequest(BaseModel):
-    msgs: list[RedisMessage]
-
-
-class ResponseError(BaseModel):
-    error: str
-
-
-class CheckCategoryResponse(BaseModel):
-    items: list[ExistingResponse]
 
 
 class ServerHandler(aiozmq.rpc.AttrHandler):
     @aiozmq.rpc.method
     async def check_category(self, request: dict) -> list[dict]:
         try:
-            found, missing = await check_labels(CheckCategoryRequest.parse_obj(request).msgs)
+            req = CheckCategoryRequest.parse_obj(request)
+            found, missing = await check_labels(req.msgs)
             if not found:
                 return [None, ResponseError(error="not_found").dict()]
             return [CheckCategoryResponse(items=found).dict(), None]
