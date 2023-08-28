@@ -4,8 +4,6 @@ from settings import SERVER_URL
 from tg.app import check_labels
 
 
-
-
 class ServerHandler(aiozmq.rpc.AttrHandler):
     @aiozmq.rpc.method
     async def check_category(self, request: dict) -> list[dict]:

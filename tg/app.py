@@ -1,5 +1,4 @@
-import os
-from typing import Sequence
+from typing import Sequence, Iterable
 import pandas as pd
 import sqlalchemy as sa
 
@@ -18,8 +17,20 @@ _META_DATA.reflect(bind=engine)
 db_table = _META_DATA.tables[DB_TABLE]
 
 
-async def check_labels(msgs: Sequence[RedisMessage]):
-    descriptions = tuple(get_text_description(msg) for msg in msgs)
+def post_proc_descriptions(descriptions: Iterable[str]) -> tuple[str]:
+    result = []
+    for desc in descriptions:
+        if "BOLT" in desc:
+            parts = desc.split(" ")
+            first_part, city = "/".join(parts[:-1]), parts[-1]
+            result.append(f"{first_part} {city}")
+        else:
+            result.append(desc)
+    return tuple(result)
+
+
+async def _check_labels(descriptions: Iterable[str]):
+    descriptions = tuple(descriptions)
     _id, _description, _category = [getattr(db_table.c, c) for c in ("id", "description", "category")]
     query = sa.select(_id, _description, _category).where(_description.in_(descriptions))
     with engine.connect() as connection:
@@ -27,23 +38,38 @@ async def check_labels(msgs: Sequence[RedisMessage]):
     data = {
         res[1]: (res[0], res[2]) for res in result
     }
-    found: list[ExistingResponse] = []
-    missing: list[RedisMessage] = []
+    found: list[list[int, tuple[str, str]]] = []
+    missing: list[int] = []
     for ind, description in enumerate(descriptions):
         if (id_category := data.get(description)) is not None:
-            id_, category = id_category
-            msg = msgs[ind]
-            found.append(
-                ExistingResponse(
-                    key=msg.key,
-                    found_key=id_,
-                    description=description,
-                    category=category,
-                    amount=msg.data.amount,
-                )
-            )
+            found.append([ind, id_category])
         else:
-            missing.append(msgs[ind])
+            missing.append(ind)
+    return found, missing
+
+
+async def check_labels(msgs: Sequence[RedisMessage]):
+    found: list[ExistingResponse] = []
+    missing: list[RedisMessage] = []
+    descriptions = tuple(get_text_description(msg) for msg in msgs)
+    found_, missing_ = await _check_labels(descriptions)
+    # Fallback
+    if missing_:
+        descriptions = post_proc_descriptions(descriptions)
+        found_, missing_ = await _check_labels(descriptions)
+    for ind, id_category in found_:
+        msg = msgs[ind]
+        id_, category = id_category
+        response = ExistingResponse(
+            key=msg.key,
+            found_key=id_,
+            description=descriptions[ind],
+            category=category,
+            amount=msg.data.amount,
+        )
+        found.append(response)
+    for ind in missing_:
+        missing.append(msgs[ind])
     return found, missing
 
 

@@ -30,21 +30,18 @@ Press Ctrl-C on the command line to stop the bot.
 
 from datetime import timedelta
 import logging
-import os
 from typing import Sequence
 
-from httpx import get
 from server.app import get_service
 from settings import TG_BOT_KEY
 
 
 from tg import app
-from tg.constants import TRAIN_MODEL
 from tg.models import MessageResponse, MessageResponseExisting
 from tg.storage import SQLCategoriesUpdateStorage, SQLTrainStorage
 from tg.utils import divide_chunks
 
-from .redis import RedisMessage, RedisReader, RedisWriter, init_redis
+from .redis import RedisMessage, RedisReader, init_redis
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 
