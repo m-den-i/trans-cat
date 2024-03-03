@@ -37,7 +37,7 @@ from settings import TG_BOT_KEY
 
 
 from tg import app
-from tg.models import MessageResponse, MessageResponseExisting
+from tg.models import MessageResponse, MessageResponseExisting, BaseMessageResponse
 from tg.storage import SQLCategoriesUpdateStorage, SQLTrainStorage
 from tg.utils import divide_chunks
 
@@ -120,7 +120,7 @@ async def clear_app(app: Application):
 
 async def assign_label_and_get_response(msgs: Sequence[RedisMessage]):
     found, missing = await app.check_labels(msgs)
-    messages: list[MessageResponse] = []
+    messages: list[BaseMessageResponse] = []
     if missing:
         storage = SQLTrainStorage(missing, app.engine, app.db_table.name) 
         predict = await app.predict_and_save(storage)
