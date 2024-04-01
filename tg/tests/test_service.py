@@ -2,7 +2,7 @@ import pytest
 
 from server.app import (CheckCategoryRequest, CheckCategoryResponse,
                         ResponseError)
-from tg.redis import CardData, RedisMessage, TType
+from application.redis import CardData, RedisMessage, TType
 
 pytestmark = pytest.mark.asyncio
 
@@ -13,6 +13,7 @@ async def test_service(client, test_msgs):
     assert err is None
     response = CheckCategoryResponse.parse_obj(resp)
     assert len(response.items) == 1
+
 
 async def test_service__not_found(client, test_msgs):
     msg = RedisMessage(

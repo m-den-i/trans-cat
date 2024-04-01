@@ -2,9 +2,10 @@ import re
 from dataclasses import dataclass
 from typing import Iterable, Sequence, Protocol
 
-from tg.models import get_text_description, ExistingResponse
-from tg.redis import RedisMessage
 import sqlalchemy as sa
+
+from application.models import get_text_description, ExistingResponse
+from application.redis import RedisMessage
 
 
 class Detector(Protocol):

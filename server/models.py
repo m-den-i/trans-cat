@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from tg.models import ExistingResponse
-from tg.redis import RedisMessage
+from application.models import ExistingResponse
+from application.redis import RedisMessage
 
 
 class CheckCategoryRequest(BaseModel):

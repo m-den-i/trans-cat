@@ -1,18 +1,16 @@
-from multiprocessing.context import BaseContext
 from typing import Sequence
 from unittest import mock
 
 import pytest
-from tg.redis import RedisMessage
-from tg.storage import SQLTrainStorage
-
+from application.redis import RedisMessage
+from application.storage import SQLTrainStorage
 from tg.telegram import process_msgs, process_pending
-
+from tg.tests.conftest import FakeContext
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_process_msgs(tg_context: BaseContext, test_msgs: Sequence[RedisMessage], storage: SQLTrainStorage):
+async def test_process_msgs(tg_context: FakeContext, test_msgs: Sequence[RedisMessage], storage: SQLTrainStorage):
     await process_msgs(tg_context, test_msgs)
     assert tg_context.bot_data["redis"].ack.await_count == 3
     tg_context.bot.send_message.assert_has_calls([
@@ -28,6 +26,7 @@ async def test_process_msgs(tg_context: BaseContext, test_msgs: Sequence[RedisMe
         ),
     ])
 
-async def test_process_pending(tg_context_redis: BaseContext, storage: SQLTrainStorage):
+
+async def test_process_pending(tg_context_redis: FakeContext, storage: SQLTrainStorage):
     await process_pending(tg_context_redis)
     assert tg_context_redis.bot_data["redis"].ack.await_count == 1

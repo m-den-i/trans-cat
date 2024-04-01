@@ -1,7 +1,8 @@
 import aiozmq.rpc
 from server.models import CheckCategoryRequest, CheckCategoryResponse, ResponseError
 from settings import SERVER_URL
-from tg.app import check_labels
+from application.redis import RedisMessage
+from application.app import check_labels, assign_label_and_get_response
 
 
 class ServerHandler(aiozmq.rpc.AttrHandler):
@@ -16,10 +17,20 @@ class ServerHandler(aiozmq.rpc.AttrHandler):
         except Exception as ex:
             return [None, ResponseError(error=str(ex)).dict()]
 
+    @aiozmq.rpc.method
+    async def assign_label(self, request: dict) -> list[dict]:
+        try:
+            redis_msg = RedisMessage.parse_obj(request)
+            msgs = await assign_label_and_get_response([redis_msg])
+            resp = {ind: cat for ind, cat in zip(msgs[0].indexes, msgs[0].categories)}
+            return [resp, None]
+        except Exception as ex:
+            return [None, ResponseError(error=str(ex)).dict()]
+
 
 async def get_service():
     return await aiozmq.rpc.serve_rpc(
-        ServerHandler(), 
+        ServerHandler(),
         bind=SERVER_URL,
     )
 

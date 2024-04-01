@@ -1,11 +1,10 @@
 import json
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
+from pydantic import BaseModel, Field, validator
 from typing import Annotated, Literal, Optional, Sequence, Union
 import redis.asyncio as redis
-from pydantic import BaseModel, Field, validator
 
 from settings import REDIS_READER_SETTINGS, REDIS_URL, REDIS_WRITER_SETTINGS
 
@@ -56,7 +55,6 @@ class TransferData(Value):
                 "%d-%m-%Y"
             )
         raise ValueError("Should be str or datetime.")
-
 
 
 class IncreaseData(Value):

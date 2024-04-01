@@ -13,9 +13,9 @@ from server.app import get_client, get_service
 
 from settings import UPLOAD_FOLDER
 
-from tg.app import update_category, engine, db_table
-from tg.redis import CardData, RedisMessage, RedisReader, RedisWriter, RedisWriterConfig, TType, TransferData, init_redis
-from tg.storage import SQLTrainStorage, SQLUpdateStorage
+from application.app import engine, db_table
+from application.redis import CardData, RedisMessage, RedisReader, RedisWriter, RedisWriterConfig, TType, TransferData, init_redis
+from application.storage import SQLTrainStorage, SQLUpdateStorage
 
 
 pytestmark = pytest.mark.asyncio

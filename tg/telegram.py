@@ -32,19 +32,18 @@ from datetime import timedelta
 import logging
 from typing import Sequence
 
+from application.app import assign_label_and_get_response
 from server.app import get_service
 from settings import TG_BOT_KEY
 
+from application import app
+from application.redis import RedisMessage, RedisReader, init_redis
+from application.storage import SQLCategoriesUpdateStorage
 
-from tg import app
-from tg.models import MessageResponse, MessageResponseExisting, BaseMessageResponse
-from tg.storage import SQLCategoriesUpdateStorage, SQLTrainStorage
+from tg.models import MessageResponse, to_fix_category_response
 from tg.utils import divide_chunks
 
-from .redis import RedisMessage, RedisReader, init_redis
-
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -79,15 +78,18 @@ async def _load_redis(app: Application):
     assert await app.bot_data["redis"].ping()
     return redis
 
+
 async def _load_redis_bg_task(app: Application):
     logger.info("Setting up Redis poll bg job")
     app.job_queue.run_repeating(poll_redis, interval=timedelta(seconds=5))
+
 
 async def _load_server(app: Application):
     logger.info("Loading pyzmq server")
     server = await get_service()
     app.bot_data["server"] = server
     return server
+
 
 async def load_app(app: Application):
     redis = await _load_redis(app)
@@ -115,19 +117,7 @@ async def _clear_server(app: Application):
 
 async def clear_app(app: Application):
     await _clear_redis(app)
-    await _clear_server(app)    
-
-
-async def assign_label_and_get_response(msgs: Sequence[RedisMessage]):
-    found, missing = await app.check_labels(msgs)
-    messages: list[BaseMessageResponse] = []
-    if missing:
-        storage = SQLTrainStorage(missing, app.engine, app.db_table.name) 
-        predict = await app.predict_and_save(storage)
-        messages.append(MessageResponse.from_result(predict, storage.df))
-    if found:
-        messages.append(MessageResponseExisting.from_result(found))
-    return messages
+    await _clear_server(app)
 
 
 async def update_category_and_get_response(index: str, category: str, context: ContextTypes.DEFAULT_TYPE):
@@ -142,7 +132,7 @@ async def process_msgs(context: ContextTypes.DEFAULT_TYPE, msgs: Sequence[RedisM
     res = await redis.smembers("tg.financebot.members")
     for response_text in response_texts:
         for user_id in res:
-            await context.bot.send_message(user_id.decode(), **response_text.to_fix_category_response())
+            await context.bot.send_message(user_id.decode(), **to_fix_category_response(response_text))
         for index in response_text.indexes:
             await redis.ack(index)
 
@@ -207,7 +197,7 @@ async def set_category(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     query = update.callback_query
     response_text = await update_category_and_get_response(index, category, context)
     await query.answer()
-    await query.edit_message_text(**response_text.to_fix_category_response())
+    await query.edit_message_text(**to_fix_category_response(response_text))
     return START_ROUTES
 
 
@@ -220,7 +210,7 @@ async def regular_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await context.bot.edit_message_text(
         chat_id=update.message.from_user.id, 
         message_id=message,
-        **response_text.to_fix_category_response(),
+        **to_fix_category_response(response_text),
     )
     return START_ROUTES
 

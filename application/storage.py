@@ -1,12 +1,19 @@
+import logging
 from datetime import datetime
 from typing import Sequence
 
 import pandas as pd
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
+
 from lib.storage.base import BaseUpdateStorage, BaseTrainStorage
-from tg.constants import CATEGORY_COLUMN
-from tg.models import get_df_from_response
-from tg.redis import RedisMessage
+
+from .constants import CATEGORY_COLUMN
+from .models import get_df_from_response
+from .redis import RedisMessage
+
+
+logging.getLogger(__file__)
 
 
 class _BaseSQLLoader:
@@ -37,6 +44,10 @@ class SQLTrainStorage(_BaseSQLLoader, BaseTrainStorage):
 
 
 class SQLUpdateStorage(BaseUpdateStorage):
+    dtype = {
+        "operation_date": sa.DateTime,
+    }
+
     def __init__(self, train_model: pd.DataFrame, predict_model: pd.DataFrame, engine: sa.Engine, table: str):
         self.predict_model = predict_model
         self.train_model = train_model
@@ -50,7 +61,16 @@ class SQLUpdateStorage(BaseUpdateStorage):
         return self.train_model
     
     def save_predict_model(self, df: pd.DataFrame):
-        ...
+        save_df = df.copy(deep=True)
+        save_df["operation_date"] = save_df["operation_date"]
+        save_df["id"] = save_df["id"].map(lambda x: int(x.split("-")[0]))
+        with self.engine.connect() as connection:
+            try:
+                save_df.to_sql(self.table, connection, if_exists="append", index=False, dtype=self.dtype)
+                connection.commit()
+                logging.warning("prediction was saved separately")
+            except IntegrityError as iex:
+                pass
 
     def save_train_model(self, df: pd.DataFrame):
         with self.engine.connect() as connection:
@@ -59,10 +79,7 @@ class SQLUpdateStorage(BaseUpdateStorage):
             df["operation_date"] = df["operation_date"]
             df["id"] = df["id"].map(lambda x: int(x.split("-")[0]))
             df = df[df["id"] > last_index]
-            dtype = {
-                "operation_date": sa.DateTime,
-            }
-            df.to_sql(self.table, connection, if_exists="append", index=False, dtype=dtype)
+            df.to_sql(self.table, connection, if_exists="append", index=False, dtype=self.dtype)
             connection.commit()
         return self.train_model
 

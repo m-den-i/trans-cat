@@ -1,13 +1,11 @@
 import pytest
 from unittest import mock
-from redis import Redis
 from lib import transcat
-from tg.app import predict_and_save
-from tg.constants import CATEGORY_COLUMN
-from tg.models import MessageResponse
 
-from tg.storage import SQLTrainStorage
-from tg.app import update_category
+from application.app import update_category, predict_and_save
+from application.constants import CATEGORY_COLUMN
+from application.storage import SQLTrainStorage
+from tg.models import MessageResponse
 
 
 pytestmark = pytest.mark.asyncio
@@ -18,13 +16,15 @@ async def test_msg_conversion(storage: SQLTrainStorage):
     assert [round(p) for p in predict.lable_probs] == [58, 89, 49]
     assert [p for p in predict.lable_predict] == ["Zabka Nano", "Carrefour", "Leroy Merlin"]
 
+
 async def test_update_and_save(storage: SQLTrainStorage):
-    with mock.patch("tg.app.db_table.name", storage.table):
+    with mock.patch("tg.application.db_table.name", storage.table):
         predict = await predict_and_save(storage)
     df = storage._load_train_model()
     got = df.iloc[-3:].to_dict(orient="list")
     assert got["id"] == list(storage.df["id"][-3:])
     assert got[CATEGORY_COLUMN] == predict.lable_predict
+
 
 async def test_format_message(storage: SQLTrainStorage):
     predict = transcat.train_model_predict(storage, ["amount", "description"], CATEGORY_COLUMN)
@@ -35,8 +35,9 @@ async def test_format_message(storage: SQLTrainStorage):
     )
     assert msg == expected
 
+
 async def test_update_category(storage: SQLTrainStorage):
-    with mock.patch("tg.app.db_table.name", storage.table):
+    with mock.patch("tg.application.db_table.name", storage.table):
         predict = await predict_and_save(storage)
         await update_category("467-0", "Zabka")
     df = storage._load_train_model()

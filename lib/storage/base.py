@@ -2,6 +2,7 @@ import abc
 
 import pandas as pd
 
+
 class BaseTrainStorage(abc.ABC):
     @abc.abstractmethod
     def load_data_for_prediction(self) -> pd.DataFrame:
@@ -10,6 +11,7 @@ class BaseTrainStorage(abc.ABC):
     @abc.abstractmethod
     def load_train_model(self) -> pd.DataFrame:
         ...
+
 
 class BaseUpdateStorage(abc.ABC):
     @abc.abstractmethod
