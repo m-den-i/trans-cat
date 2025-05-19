@@ -4,7 +4,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import OrdinalEncoder
 
-from lib.models import PredictionResult
+from trans_cat.lib.models import PredictionResult
 
 
 def train_model_predict(

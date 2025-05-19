@@ -4,7 +4,7 @@ import codecs
 import chardet
 import pandas as pd
 
-from lib.storage.base import BaseTrainStorage, BaseUpdateStorage
+from trans_cat.lib.storage.base import BaseTrainStorage, BaseUpdateStorage
 
 
 class CSVBaseTrainStorage(BaseTrainStorage, abc.ABC):

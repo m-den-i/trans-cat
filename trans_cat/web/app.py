@@ -1,5 +1,4 @@
 import dataclasses as dtcls
-import numpy as np
 import pandas as pd
 import chardet
 import json
@@ -8,20 +7,13 @@ import os
 import shutil
 import codecs
 
-from scipy.stats import uniform, randint
-from base64 import encode
-from sklearn.datasets import load_breast_cancer, load_diabetes, load_wine
-from sklearn.metrics import auc, accuracy_score, confusion_matrix, mean_squared_error
-from sklearn.model_selection import cross_val_score, GridSearchCV, KFold, RandomizedSearchCV, train_test_split
-from sklearn.model_selection import cross_val_score
 from settings import UPLOAD_FOLDER, DOWNLOAD_FOLDER
 from pathlib import Path
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, send_file, send_from_directory
-from lib import transcat
+from flask import Flask, redirect, render_template, request, send_file
 
-from lib.storage.csv import CSVTrainStorage, CSVUpdateStorage
-from lib import transcat
+from trans_cat.lib.storage.csv import CSVTrainStorage, CSVUpdateStorage
+from trans_cat.lib import transcat
 
 
 app = Flask(__name__)

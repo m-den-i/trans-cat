@@ -1,7 +1,7 @@
 [project]
 name = "trans-cat"
 version = "0.1.0"
-description = "Add your description here"
+description = "Categorize your transactions for Firefly III"
 requires-python = ">=3.11"
 dependencies = [
     "flask",
@@ -13,6 +13,8 @@ dependencies = [
     "scikit-learn",
     "pytest",
 ]
+readme = "README.md"
+license = "MIT"
 
 [dependency-groups]
 dev = [
@@ -99,3 +101,10 @@ docstring-code-format = false
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+[project.urls]
+Homepage = "https://github.com/Hapyr/trans-cat"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

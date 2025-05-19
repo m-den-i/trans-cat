@@ -1,8 +1,8 @@
 import pandas as pd
 
-from lib import train
-from lib.models import PredictionResult
-from lib.storage.base import BaseTrainStorage, BaseUpdateStorage
+from trans_cat.lib import train
+from trans_cat.lib.models import PredictionResult
+from trans_cat.lib.storage.base import BaseTrainStorage, BaseUpdateStorage
 
 
 def train_model_predict(

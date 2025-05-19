@@ -1,0 +1,8 @@
+flask
+numpy
+pandas
+chardet
+python-dotenv
+scipy
+scikit-learn
+pytest
